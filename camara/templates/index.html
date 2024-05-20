@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leer Códigos de Barras</title>
+    <style>
+        video {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Leer Códigos de Barras</h1>
+    <video id="videoElement" autoplay></video>
+    <p id="result"></p>
+
+    <script src="https://unpkg.com/exceljs@3.10.1/dist/exceljs.min.js"></script>
+
+    <script>
+        var videoElement = document.getElementById('videoElement');
+        var resultElement = document.getElementById('result');
+        var barcodes = [];
+
+        function startBarcodeScanner() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    videoElement.srcObject = stream;
+                    startBarcodeDetection();
+                })
+                .catch(function(error) {
+                    console.error('Error al acceder a la cámara:', error);
+                });
+        }
+
+        function startBarcodeDetection() {
+            var barcodeDetector = new BarcodeDetector();
+            var videoStream = videoElement.srcObject;
+
+            function processFrame() {
+                videoElement.play();
+                barcodeDetector.detect(videoElement)
+                    .then(function(barcodes) {
+                        if (barcodes.length > 0) {
+                            for (var i = 0; i < barcodes.length; i++) {
+                                var barcode = barcodes[i].rawValue;
+                                var count = barcodes.filter(function(b) { return b.rawValue === barcode; }).length;
+                                barcodes.push({ barcode: barcode, count: count });
+                            }
+                        }
+                        setTimeout(processFrame, 100);
+                    })
+                    .catch(function(error) {
+                        console.error('Error al detectar el código de barras:', error);
+                    });
+            }
+
+            processFrame();
+        }
+
+        function generateExcelFile() {
+            var workbook = new ExcelJS.Workbook();
+            var worksheet = workbook.addWorksheet('Códigos de Barras');
+
+            worksheet.columns = [
+                { header: 'Código de Barras', key: 'barcode' },
+                { header: 'Cantidad', key: 'count' }
+            ];
+
+            worksheet.addRows(barcodes);
+
+            workbook.xlsx.writeBuffer().then(function(buffer) {
+                var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'códigos_de_barras.xlsx';
+                a.click();
+            });
+        }
+
+        document.getElementById('startButton').addEventListener('click', startBarcodeScanner);
+        document.getElementById('generateButton').addEventListener('click', generateExcelFile);
+    </script>
+
+    <button id="startButton">Iniciar Escaneo</button>
+    <button id="generateButton">Generar Excel</button>
+</body>
+</html>
