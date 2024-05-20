@@ -31,7 +31,7 @@ RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
     #DEBUG = False #'RENDER' not in os.environ
 #else:
    # DEBUG =True
-DEBUG =True
+DEBUG = 'RENDER' not in os.environ
 ALLOWED_HOSTS = []
 
 if RENDER_EXTERNAL_HOSTNAME:
